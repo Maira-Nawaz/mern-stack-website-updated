@@ -1,42 +1,36 @@
-const { Exam } = require("../models/Exam"); // ✅ Fixed Import Path
+const Submission = require("../models/Submission");
 
-// ✅ Create Exam
-exports.createExam = async (req, res) => {
+// ✅ Student submits exam
+const submitExam = async (req, res) => {
   try {
-    console.log("📥 Received Data:", req.body); // Debugging
+    console.log("Received Exam Submission Request");
 
-    // Create new exam
-    const exam = new Exam(req.body);
-    await exam.save();
+    // Debugging logs
+    console.log("Request Body:", req.body);
+    console.log("Uploaded File:", req.file);
 
-    res.status(201).json({ success: true, message: "✅ Exam created successfully!", exam });
-  } catch (error) {
-    console.error("❌ Error creating exam:", error); // Debugging
-    res.status(500).json({ success: false, message: "Error creating exam", error });
-  }
-};
+    const { studentId, examId, answers } = req.body;
+    const filePath = req.file ? req.file.path : null; // Get uploaded file path
 
-// ✅ Get Exam by ID
-exports.getExamById = async (req, res) => {
-  try {
-    const exam = await Exam.findById(req.params.id);
-
-    if (!exam) {
-      return res.status(404).json({ success: false, message: "Exam not found" });
+    if (!studentId || !examId) {
+      return res.status(400).json({ error: "Student ID and Exam ID are required" });
     }
 
-    res.json({ success: true, exam });
+    const newSubmission = new Submission({
+      studentId,
+      examId,
+      answers,
+      file: filePath, // Store file path in DB
+    });
+
+    await newSubmission.save();
+
+    console.log("Submission Saved to Database:", newSubmission);
+    res.status(201).json({ message: "Exam submitted successfully!", submission: newSubmission });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error("Error Submitting Exam:", error);
+    res.status(500).json({ error: "Failed to submit exam" });
   }
 };
 
-// ✅ Get All Exams
-exports.getExams = async (req, res) => {
-  try {
-    const exams = await Exam.find();
-    res.json({ success: true, exams });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
-  }
-};
+module.exports = { submitExam };
